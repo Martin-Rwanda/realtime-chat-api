@@ -16,9 +16,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         database: configService.get<string>('database.name'),
         entities: [__dirname + '/typeorm/entities/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/typeorm/migrations/**/*{.ts,.js}'],
-        synchronize: false,       // NEVER true in production — we use migrations
+        synchronize: false,
         logging: configService.get<string>('app.nodeEnv') === 'development',
-        migrationsRun: false,     // we run migrations manually
+        migrationsRun: false,
       }),
     }),
   ],
