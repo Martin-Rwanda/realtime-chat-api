@@ -41,7 +41,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     // Log server errors
-    if (status >= 500) {
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `${request.method} ${request.url} ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
