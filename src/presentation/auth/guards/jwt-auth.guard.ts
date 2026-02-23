@@ -10,6 +10,12 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+interface JwtPayload {
+  sub: string;
+  email: string;
+  username: string;
+}
+
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -19,14 +25,13 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Allow public routes
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<Request & { user: JwtPayload }>();
     const token = this.extractToken(request);
 
     if (!token) {
@@ -34,10 +39,10 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.configService.get<string>('jwt.accessSecret'),
       });
-      request['user'] = payload;
+      request.user = payload;
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
