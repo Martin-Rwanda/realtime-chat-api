@@ -77,7 +77,7 @@ export class RoomRepositoryImpl implements IRoomRepository {
         await this.roomRepo.delete(roomId);
     }
 
-    private toDomain(entity: RoomOrmEntity): Room {
+    private toDomain = (entity: RoomOrmEntity): Room => {
         const room = new Room();
         room.id = entity.id;
         room.name = entity.name;
@@ -89,7 +89,7 @@ export class RoomRepositoryImpl implements IRoomRepository {
         return room;
     }
 
-    private toDomainMember(entity: RoomMemberOrmEntity): RoomMember {
+    private toDomainMember = (entity: RoomMemberOrmEntity): RoomMember => {
         const member = new RoomMember();
         member.id = entity.id;
         member.roomId = entity.roomId;

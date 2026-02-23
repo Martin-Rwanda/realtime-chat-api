@@ -2,7 +2,6 @@ import {
   Injectable,
   Inject,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import type { IRoomRepository } from '../../../core/repositories/room.repository';
 import { ROOM_REPOSITORY } from '../../../core/repositories/room.repository';
