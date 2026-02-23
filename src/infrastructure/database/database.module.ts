@@ -5,6 +5,8 @@ import { UserOrmEntity } from './typeorm/entities/user.orm-entity';
 import { RefreshTokenOrmEntity } from './typeorm/entities/refresh-token.orm-entity';
 import { RoomOrmEntity } from './typeorm/entities/room.orm-entity';
 import { RoomMemberOrmEntity } from './typeorm/entities/room-member.orm-entity';
+import { MessageOrmEntity } from './typeorm/entities/message.orm-entity';
+import { MessageReadOrmEntity } from './typeorm/entities/message-read.orm-entity';
 
 @Module({
   imports: [
@@ -18,7 +20,7 @@ import { RoomMemberOrmEntity } from './typeorm/entities/room-member.orm-entity';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.name'),
-        entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity],
+        entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity, MessageOrmEntity, MessageReadOrmEntity,],
         migrations: [__dirname + '/typeorm/migrations/**/*{.ts,.js}'],
         synchronize: false,
         logging: configService.get<string>('app.nodeEnv') === 'development',
