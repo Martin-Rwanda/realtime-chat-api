@@ -157,16 +157,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     private getSocketData(client: Socket): SocketData | null {
-        const data = (client as Socket & { data: unknown }).data;
+        const rawData: unknown = (client as { data: unknown }).data;
         if (
-        data &&
-        typeof data === 'object' &&
-        'userId' in data &&
-        'username' in data &&
-        typeof (data as SocketData).userId === 'string' &&
-        typeof (data as SocketData).username === 'string'
+            rawData &&
+            typeof rawData === 'object' &&
+            'userId' in rawData &&
+            'username' in rawData &&
+            typeof (rawData as SocketData).userId === 'string' &&
+            typeof (rawData as SocketData).username === 'string'
         ) {
-        return data as SocketData;
+            return rawData as SocketData;
         }
         return null;
     }
