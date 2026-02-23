@@ -19,21 +19,20 @@ export class DeleteMessageUseCase {
         private readonly roomRepository: IRoomRepository,
     ) {}
 
-    async execute(userId: string, messageId: string): Promise<void> {
+    async execute(userId: string, messageId: string): Promise<{ roomId: string }> {
         const message = await this.messageRepository.findById(messageId);
         if (!message) throw new NotFoundException('Message not found');
 
         const member = await this.roomRepository.findMember(message.roomId, userId);
-
-        // Own message OR admin/owner can delete
         const isOwnerOrAdmin =
-        member?.role === MemberRole.OWNER || member?.role === MemberRole.ADMIN;
+            member?.role === MemberRole.OWNER || member?.role === MemberRole.ADMIN;
 
         if (message.senderId !== userId && !isOwnerOrAdmin) {
-        throw new ForbiddenException('You cannot delete this message');
+            throw new ForbiddenException('You cannot delete this message');
         }
 
-        // Soft delete — we keep the message but mark it deleted
         await this.messageRepository.update(messageId, { isDeleted: true });
+
+        return { roomId: message.roomId };
     }
 }

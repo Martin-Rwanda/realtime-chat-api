@@ -24,6 +24,7 @@ import { ROOM_REPOSITORY } from '../../core/repositories/room.repository';
 import { USER_REPOSITORY } from '../../core/repositories/user.repository';
 import { MESSAGE_REPOSITORY } from '../../core/repositories/message.repository';
 import { AuthModule } from '../auth/auth.module';
+import { WebsocketsModule } from '../../infrastructure/websockets/websockets.module';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { AuthModule } from '../auth/auth.module';
         MessageReadOrmEntity,
         ]),
         AuthModule,
+        WebsocketsModule
     ],
     controllers: [RoomsController, MessagesController],
     providers: [
