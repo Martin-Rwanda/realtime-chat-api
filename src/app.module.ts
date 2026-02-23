@@ -5,6 +5,7 @@ import { AuthModule } from './presentation/auth/auth.module';
 import { UsersModule } from './presentation/users/users.module';
 import { ChatModule } from './presentation/chat/chat.module';
 import configuration from './shared/config/configuration';
+import { WebsocketsModule } from './infrastructure/websockets/websockets.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import configuration from './shared/config/configuration';
     DatabaseModule,
     AuthModule,
     UsersModule,
-    ChatModule
+    ChatModule,
+    WebsocketsModule
   ],
 })
 export class AppModule {}

@@ -22,6 +22,7 @@ import { CreateDmDto } from './dto/create-dm.dto';
 import type { IRoomRepository } from '../../core/repositories/room.repository';
 import { ROOM_REPOSITORY } from '../../core/repositories/room.repository';
 import { Inject } from '@nestjs/common';
+import { ChatGateway } from '../../infrastructure/websockets/chat.gateway';
 
 @ApiTags('Rooms')
 @ApiBearerAuth('JWT-auth')
@@ -34,6 +35,7 @@ export class RoomsController {
         private readonly leaveRoomUseCase: LeaveRoomUseCase,
         private readonly createDmUseCase: CreateDmUseCase,
         private readonly deleteRoomUseCase: DeleteRoomUseCase,
+        private readonly chatGateway: ChatGateway,
         @Inject(ROOM_REPOSITORY)
         private readonly roomRepository: IRoomRepository,
     ) {}
@@ -71,12 +73,13 @@ export class RoomsController {
 
     @Post(':id/join')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Join a public room' })
     async joinRoom(
         @CurrentUser() user: { sub: string },
         @Param('id') roomId: string,
     ) {
         const member = await this.joinRoomUseCase.execute(user.sub, roomId);
+        await this.chatGateway.addUserToRoom(user.sub, roomId);
+        this.chatGateway.emitUserJoinedRoom(roomId, user.sub, '');
         return { success: true, data: member };
     }
 
@@ -88,6 +91,8 @@ export class RoomsController {
         @Param('id') roomId: string,
     ) {
         await this.leaveRoomUseCase.execute(user.sub, roomId);
+        this.chatGateway.removeUserFromRoom(user.sub, roomId);
+        this.chatGateway.emitUserLeftRoom(roomId, user.sub, '');
         return { success: true, message: 'Left room successfully' };
     }
 

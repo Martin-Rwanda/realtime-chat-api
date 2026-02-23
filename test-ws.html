@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>WebSocket Chat Test</h2>
+  <input id="token" placeholder="Paste JWT token here" style="width:500px"/>
+  <button onclick="connect()">Connect</button>
+  <br><br>
+  <div id="status">Disconnected</div>
+  <div id="logs" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-top:10px"></div>
+
+  <script>
+    let socket;
+
+    function log(msg) {
+      const div = document.getElementById('logs');
+      div.innerHTML += `<p>${new Date().toISOString()} — ${msg}</p>`;
+      div.scrollTop = div.scrollHeight;
+    }
+
+    function connect() {
+      const token = document.getElementById('token').value;
+
+      socket = io('http://localhost:3000/chat', {
+        auth: { token }
+      });
+
+      socket.on('connect', () => {
+        document.getElementById('status').innerText = '✅ Connected: ' + socket.id;
+        log('Connected!');
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('status').innerText = '❌ Disconnected';
+        log('Disconnected');
+      });
+
+      socket.on('user:online', (data) => log('🟢 Online: ' + JSON.stringify(data)));
+      socket.on('user:offline', (data) => log('🔴 Offline: ' + JSON.stringify(data)));
+      socket.on('message:new', (data) => log('💬 New message: ' + JSON.stringify(data)));
+      socket.on('message:edited', (data) => log('✏️ Edited: ' + JSON.stringify(data)));
+      socket.on('message:deleted', (data) => log('🗑️ Deleted: ' + JSON.stringify(data)));
+      socket.on('user:typing', (data) => log('⌨️ Typing: ' + JSON.stringify(data)));
+      socket.on('room:user-joined', (data) => log('👋 Joined: ' + JSON.stringify(data)));
+      socket.on('room:user-left', (data) => log('👋 Left: ' + JSON.stringify(data)));
+    }
+  </script>
+</body>
+</html>

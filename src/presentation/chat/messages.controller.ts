@@ -22,6 +22,7 @@ import { MarkReadUseCase } from '../../application/chat/use-cases/mark-read.use-
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
+import { ChatGateway } from '../../infrastructure/websockets/chat.gateway';
 
 @ApiTags('Messages')
 @ApiBearerAuth('JWT-auth')
@@ -34,6 +35,7 @@ export class MessagesController {
         private readonly editMessageUseCase: EditMessageUseCase,
         private readonly deleteMessageUseCase: DeleteMessageUseCase,
         private readonly markReadUseCase: MarkReadUseCase,
+        private readonly chatGateway: ChatGateway,
     ) {}
 
     @Post()
@@ -43,6 +45,8 @@ export class MessagesController {
         @Body() dto: SendMessageDto,
     ) {
         const message = await this.sendMessageUseCase.execute(user.sub, dto);
+        // emit real-time event to all room members
+        this.chatGateway.emitNewMessage(message.roomId, message);
         return { success: true, data: message };
     }
 
@@ -71,6 +75,7 @@ export class MessagesController {
         @Body() dto: EditMessageDto,
     ) {
         const message = await this.editMessageUseCase.execute(user.sub, messageId, dto);
+        this.chatGateway.emitEditedMessage(message.roomId, message);
         return { success: true, data: message };
     }
 
@@ -81,7 +86,8 @@ export class MessagesController {
         @CurrentUser() user: { sub: string },
         @Param('id') messageId: string,
     ) {
-        await this.deleteMessageUseCase.execute(user.sub, messageId);
+        const { roomId } = await this.deleteMessageUseCase.execute(user.sub, messageId);
+        this.chatGateway.emitDeletedMessage(roomId, messageId);
         return { success: true, message: 'Message deleted' };
     }
 
