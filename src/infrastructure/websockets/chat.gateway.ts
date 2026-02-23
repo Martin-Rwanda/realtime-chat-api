@@ -179,18 +179,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             if (typeof auth.token === 'string') {
             token = auth.token;
-            } else {
-                const headers: Record<string, string | string[] | undefined> = client.handshake.headers;
-                const authHeader = headers['authorization'];
-                if (typeof authHeader === 'string') {
-                    token = authHeader.replace('Bearer ', '');
-                }
+            } else if (typeof client.handshake.headers['authorization'] === 'string') {
+                token = (client.handshake.headers['authorization'] as string).replace('Bearer ', '');
             }
 
             if (!token) return null;
 
             return this.jwtService.verify<JwtPayload>(token, {
-            secret: this.configService.get<string>('jwt.accessSecret'),
+                secret: this.configService.get<string>('jwt.accessSecret'),
             });
         } catch {
             return null;
