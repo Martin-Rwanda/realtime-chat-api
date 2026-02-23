@@ -180,11 +180,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             if (typeof auth.token === 'string') {
             token = auth.token;
             } else {
-            const headers = client.handshake.headers as Record<string, string | string[] | undefined>;
-            const authHeader = headers['authorization'];
-            if (typeof authHeader === 'string') {
-                token = authHeader.replace('Bearer ', '');
-            }
+                const headers: Record<string, string | string[] | undefined> = client.handshake.headers;
+                const authHeader = headers['authorization'];
+                if (typeof authHeader === 'string') {
+                    token = authHeader.replace('Bearer ', '');
+                }
             }
 
             if (!token) return null;
