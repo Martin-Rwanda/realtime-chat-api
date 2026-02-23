@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserOrmEntity } from './typeorm/entities/user.orm-entity';
+import { RefreshTokenOrmEntity } from './typeorm/entities/refresh-token.orm-entity';
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.name'),
-        entities: [__dirname + '/typeorm/entities/**/*.entity{.ts,.js}'],
+        entities: [UserOrmEntity, RefreshTokenOrmEntity],
         migrations: [__dirname + '/typeorm/migrations/**/*{.ts,.js}'],
         synchronize: false,
         logging: configService.get<string>('app.nodeEnv') === 'development',

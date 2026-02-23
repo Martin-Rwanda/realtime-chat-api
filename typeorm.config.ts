@@ -1,5 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+import { UserOrmEntity } from './src/infrastructure/database/typeorm/entities/user.orm-entity';
+import { RefreshTokenOrmEntity } from './src/infrastructure/database/typeorm/entities/refresh-token.orm-entity';
 
 config();
 
@@ -10,7 +12,7 @@ export default new DataSource({
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_NAME ?? 'postgres',
-  entities: ['src/infrastructure/database/typeorm/entities/**/*.entity.ts'],
+  entities: [UserOrmEntity, RefreshTokenOrmEntity],
   migrations: ['src/infrastructure/database/typeorm/migrations/**/*.ts'],
   synchronize: false,
 });
