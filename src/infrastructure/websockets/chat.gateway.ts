@@ -173,17 +173,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     private extractPayload(client: Socket): JwtPayload | null {
         try {
-        const auth = client.handshake.auth as Record<string, unknown>;
-        const token =
-            typeof auth.token === 'string'
-            ? auth.token
-            : client.handshake.headers.authorization?.replace('Bearer ', '');
-        if (!token) return null;
-        return this.jwtService.verify<JwtPayload>(token, {
+            const auth = client.handshake.auth as Record<string, unknown>;
+            const authHeader = client.handshake.headers.authorization;
+            const headerToken = typeof authHeader === 'string'
+            ? authHeader.replace('Bearer ', '')
+            : undefined;
+
+            const token = typeof auth.token === 'string' ? auth.token : headerToken;
+
+            if (!token) return null;
+            return this.jwtService.verify<JwtPayload>(token, {
             secret: this.configService.get<string>('jwt.accessSecret'),
-        });
+            });
         } catch {
-        return null;
-        }
+            return null;
     }
+}
 }
