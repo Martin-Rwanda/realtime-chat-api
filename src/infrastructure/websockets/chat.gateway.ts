@@ -23,11 +23,15 @@ interface JwtPayload {
   username: string;
 }
 
+interface SocketData {
+  userId: string;
+  username: string;
+}
+
+type AuthenticatedSocket = Socket & { data: SocketData };
+
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: { origin: '*', credentials: true },
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -35,8 +39,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
-
-  // Map of userId → socketId (track online users)
   private connectedUsers = new Map<string, string>();
 
   constructor(
@@ -48,7 +50,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly memberRepo: Repository<RoomMemberOrmEntity>,
   ) {}
 
-  // ─── Connection ────────────────────────────────────────────────
   async handleConnection(client: Socket): Promise<void> {
     try {
       const payload = this.extractPayload(client);
@@ -57,65 +58,48 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      const socket = client as AuthenticatedSocket;
       const userId = payload.sub;
 
-      // Store connection
-      this.connectedUsers.set(userId, client.id);
-      client.data.userId = userId;
-      client.data.username = payload.username;
+      this.connectedUsers.set(userId, socket.id);
+      socket.data.userId = userId;
+      socket.data.username = payload.username;
 
-      // Update user status to online
       await this.userRepo.update(userId, { status: UserStatus.ONLINE });
 
-      // Auto-join all rooms the user is a member of
-      const memberships = await this.memberRepo.find({
-        where: { userId },
-      });
-
+      const memberships = await this.memberRepo.find({ where: { userId } });
       for (const membership of memberships) {
-        await client.join(membership.roomId);
+        await socket.join(membership.roomId);
       }
 
-      // Notify others that user is online
-      this.server.emit('user:online', {
-        userId,
-        username: payload.username,
-      });
-
-      this.logger.log(`Client connected: ${payload.username} (${client.id})`);
+      this.server.emit('user:online', { userId, username: payload.username });
+      this.logger.log(`Client connected: ${payload.username} (${socket.id})`);
     } catch {
       client.disconnect();
     }
   }
 
-  // ─── Disconnection ─────────────────────────────────────────────
   async handleDisconnect(client: Socket): Promise<void> {
-    const userId = client.data.userId as string;
+    const socket = client as AuthenticatedSocket;
+    const userId = socket.data.userId;
+    const username = socket.data.username;
     if (!userId) return;
 
     this.connectedUsers.delete(userId);
-
-    // Update user status to offline
     await this.userRepo.update(userId, { status: UserStatus.OFFLINE });
-
-    // Notify others
-    this.server.emit('user:offline', {
-      userId,
-      username: client.data.username,
-    });
-
-    this.logger.log(`Client disconnected: ${client.data.username} (${client.id})`);
+    this.server.emit('user:offline', { userId, username });
+    this.logger.log(`Client disconnected: ${username} (${socket.id})`);
   }
 
-  // ─── Typing Indicators ─────────────────────────────────────────
   @SubscribeMessage('user:typing')
   handleTyping(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string },
   ): void {
+    const socket = client as AuthenticatedSocket;
     client.to(data.roomId).emit('user:typing', {
-      userId: client.data.userId,
-      username: client.data.username,
+      userId: socket.data.userId,
+      username: socket.data.username,
       roomId: data.roomId,
     });
   }
@@ -125,14 +109,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string },
   ): void {
+    const socket = client as AuthenticatedSocket;
     client.to(data.roomId).emit('user:stop-typing', {
-      userId: client.data.userId,
-      username: client.data.username,
+      userId: socket.data.userId,
+      username: socket.data.username,
       roomId: data.roomId,
     });
   }
 
-  // ─── Public methods (called from HTTP controllers) ──────────────
   emitNewMessage(roomId: string, message: unknown): void {
     this.server.to(roomId).emit('message:new', message);
   }
@@ -153,7 +137,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(roomId).emit('room:user-left', { roomId, userId, username });
   }
 
-  // Add socket to room when user joins
   async addUserToRoom(userId: string, roomId: string): Promise<void> {
     const socketId = this.connectedUsers.get(userId);
     if (socketId) {
@@ -162,24 +145,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // Remove socket from room when user leaves
-  async removeUserFromRoom(userId: string, roomId: string): Promise<void> {
+  removeUserFromRoom(userId: string, roomId: string): void {
     const socketId = this.connectedUsers.get(userId);
     if (socketId) {
       const socket = this.server.sockets.sockets.get(socketId);
-      if (socket) socket.leave(roomId);
+      if (socket) {
+        void socket.leave(roomId);
+      }
     }
   }
 
-  // ─── JWT extraction ────────────────────────────────────────────
   private extractPayload(client: Socket): JwtPayload | null {
     try {
       const token =
-        client.handshake.auth.token as string ||
+        (client.handshake.auth as { token?: string }).token ??
         client.handshake.headers.authorization?.replace('Bearer ', '');
-
       if (!token) return null;
-
       return this.jwtService.verify<JwtPayload>(token, {
         secret: this.configService.get<string>('jwt.accessSecret'),
       });
