@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserOrmEntity } from './typeorm/entities/user.orm-entity';
 import { RefreshTokenOrmEntity } from './typeorm/entities/refresh-token.orm-entity';
+import { RoomOrmEntity } from './typeorm/entities/room.orm-entity';
+import { RoomMemberOrmEntity } from './typeorm/entities/room-member.orm-entity';
 
 @Module({
   imports: [
@@ -16,7 +18,7 @@ import { RefreshTokenOrmEntity } from './typeorm/entities/refresh-token.orm-enti
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.name'),
-        entities: [UserOrmEntity, RefreshTokenOrmEntity],
+        entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity],
         migrations: [__dirname + '/typeorm/migrations/**/*{.ts,.js}'],
         synchronize: false,
         logging: configService.get<string>('app.nodeEnv') === 'development',
