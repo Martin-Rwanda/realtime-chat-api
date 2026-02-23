@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { AuthModule } from './presentation/auth/auth.module';
+import { UsersModule } from './presentation/users/users.module';
 import configuration from './shared/config/configuration';
 
 @Module({
@@ -12,7 +13,8 @@ import configuration from './shared/config/configuration';
       envFilePath: '.env',
     }),
     DatabaseModule,
-    AuthModule
+    AuthModule,
+    UsersModule
   ],
 })
 export class AppModule {}
