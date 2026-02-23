@@ -91,7 +91,7 @@ export class RoomsController {
         @Param('id') roomId: string,
     ) {
         await this.leaveRoomUseCase.execute(user.sub, roomId);
-        await this.chatGateway.removeUserFromRoom(user.sub, roomId);
+        this.chatGateway.removeUserFromRoom(user.sub, roomId);
         this.chatGateway.emitUserLeftRoom(roomId, user.sub, '');
         return { success: true, message: 'Left room successfully' };
     }

@@ -28,144 +28,162 @@ interface SocketData {
   username: string;
 }
 
-type AuthenticatedSocket = Socket & { data: SocketData };
-
 @WebSocketGateway({
   cors: { origin: '*', credentials: true },
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer()
-  server: Server;
+    @WebSocketServer()
+    server: Server;
 
-  private readonly logger = new Logger(ChatGateway.name);
-  private connectedUsers = new Map<string, string>();
+    private readonly logger = new Logger(ChatGateway.name);
+    private connectedUsers = new Map<string, string>();
 
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    @InjectRepository(UserOrmEntity)
-    private readonly userRepo: Repository<UserOrmEntity>,
-    @InjectRepository(RoomMemberOrmEntity)
-    private readonly memberRepo: Repository<RoomMemberOrmEntity>,
-  ) {}
+    constructor(
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
+        @InjectRepository(UserOrmEntity)
+        private readonly userRepo: Repository<UserOrmEntity>,
+        @InjectRepository(RoomMemberOrmEntity)
+        private readonly memberRepo: Repository<RoomMemberOrmEntity>,
+    ) {}
 
-  async handleConnection(client: Socket): Promise<void> {
-    try {
-      const payload = this.extractPayload(client);
-      if (!payload) {
+    async handleConnection(client: Socket): Promise<void> {
+        try {
+        const payload = this.extractPayload(client);
+        if (!payload) {
+            client.disconnect();
+            return;
+        }
+
+        const userId = payload.sub;
+        const username = payload.username;
+
+        this.setSocketData(client, { userId, username });
+        this.connectedUsers.set(userId, client.id);
+
+        await this.userRepo.update({ id: userId }, { status: UserStatus.ONLINE });
+
+        const memberships = await this.memberRepo.find({ where: { userId } });
+        for (const membership of memberships) {
+            await client.join(membership.roomId);
+        }
+
+        this.server.emit('user:online', { userId, username });
+        this.logger.log(`Client connected: ${username} (${client.id})`);
+        } catch {
         client.disconnect();
-        return;
-      }
-
-      const socket = client as AuthenticatedSocket;
-      const userId = payload.sub;
-
-      this.connectedUsers.set(userId, socket.id);
-      socket.data.userId = userId;
-      socket.data.username = payload.username;
-
-      await this.userRepo.update(userId, { status: UserStatus.ONLINE });
-
-      const memberships = await this.memberRepo.find({ where: { userId } });
-      for (const membership of memberships) {
-        await socket.join(membership.roomId);
-      }
-
-      this.server.emit('user:online', { userId, username: payload.username });
-      this.logger.log(`Client connected: ${payload.username} (${socket.id})`);
-    } catch {
-      client.disconnect();
+        }
     }
-  }
 
-  async handleDisconnect(client: Socket): Promise<void> {
-    const socket = client as AuthenticatedSocket;
-    const userId = socket.data.userId;
-    const username = socket.data.username;
-    if (!userId) return;
+    async handleDisconnect(client: Socket): Promise<void> {
+        const data = this.getSocketData(client);
+        if (!data) return;
 
-    this.connectedUsers.delete(userId);
-    await this.userRepo.update(userId, { status: UserStatus.OFFLINE });
-    this.server.emit('user:offline', { userId, username });
-    this.logger.log(`Client disconnected: ${username} (${socket.id})`);
-  }
-
-  @SubscribeMessage('user:typing')
-  handleTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
-  ): void {
-    const socket = client as AuthenticatedSocket;
-    client.to(data.roomId).emit('user:typing', {
-      userId: socket.data.userId,
-      username: socket.data.username,
-      roomId: data.roomId,
-    });
-  }
-
-  @SubscribeMessage('user:stop-typing')
-  handleStopTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
-  ): void {
-    const socket = client as AuthenticatedSocket;
-    client.to(data.roomId).emit('user:stop-typing', {
-      userId: socket.data.userId,
-      username: socket.data.username,
-      roomId: data.roomId,
-    });
-  }
-
-  emitNewMessage(roomId: string, message: unknown): void {
-    this.server.to(roomId).emit('message:new', message);
-  }
-
-  emitEditedMessage(roomId: string, message: unknown): void {
-    this.server.to(roomId).emit('message:edited', message);
-  }
-
-  emitDeletedMessage(roomId: string, messageId: string): void {
-    this.server.to(roomId).emit('message:deleted', { messageId, roomId });
-  }
-
-  emitUserJoinedRoom(roomId: string, userId: string, username: string): void {
-    this.server.to(roomId).emit('room:user-joined', { roomId, userId, username });
-  }
-
-  emitUserLeftRoom(roomId: string, userId: string, username: string): void {
-    this.server.to(roomId).emit('room:user-left', { roomId, userId, username });
-  }
-
-  async addUserToRoom(userId: string, roomId: string): Promise<void> {
-    const socketId = this.connectedUsers.get(userId);
-    if (socketId) {
-      const socket = this.server.sockets.sockets.get(socketId);
-      if (socket) await socket.join(roomId);
+        const { userId, username } = data;
+        this.connectedUsers.delete(userId);
+        await this.userRepo.update({ id: userId }, { status: UserStatus.OFFLINE });
+        this.server.emit('user:offline', { userId, username });
+        this.logger.log(`Client disconnected: ${username} (${client.id})`);
     }
-  }
 
-  removeUserFromRoom(userId: string, roomId: string): void {
-    const socketId = this.connectedUsers.get(userId);
-    if (socketId) {
-      const socket = this.server.sockets.sockets.get(socketId);
-      if (socket) {
-        void socket.leave(roomId);
-      }
+    @SubscribeMessage('user:typing')
+    handleTyping(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { roomId: string },
+    ): void {
+        const socketData = this.getSocketData(client);
+        if (!socketData) return;
+        client.to(data.roomId).emit('user:typing', {
+        userId: socketData.userId,
+        username: socketData.username,
+        roomId: data.roomId,
+        });
     }
-  }
 
-  private extractPayload(client: Socket): JwtPayload | null {
-    try {
-      const token =
-        (client.handshake.auth as { token?: string }).token ??
-        client.handshake.headers.authorization?.replace('Bearer ', '');
-      if (!token) return null;
-      return this.jwtService.verify<JwtPayload>(token, {
-        secret: this.configService.get<string>('jwt.accessSecret'),
-      });
-    } catch {
-      return null;
+    @SubscribeMessage('user:stop-typing')
+    handleStopTyping(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { roomId: string },
+    ): void {
+        const socketData = this.getSocketData(client);
+        if (!socketData) return;
+        client.to(data.roomId).emit('user:stop-typing', {
+        userId: socketData.userId,
+        username: socketData.username,
+        roomId: data.roomId,
+        });
     }
-  }
+
+    emitNewMessage(roomId: string, message: unknown): void {
+        this.server.to(roomId).emit('message:new', message);
+    }
+
+    emitEditedMessage(roomId: string, message: unknown): void {
+        this.server.to(roomId).emit('message:edited', message);
+    }
+
+    emitDeletedMessage(roomId: string, messageId: string): void {
+        this.server.to(roomId).emit('message:deleted', { messageId, roomId });
+    }
+
+    emitUserJoinedRoom(roomId: string, userId: string, username: string): void {
+        this.server.to(roomId).emit('room:user-joined', { roomId, userId, username });
+    }
+
+    emitUserLeftRoom(roomId: string, userId: string, username: string): void {
+        this.server.to(roomId).emit('room:user-left', { roomId, userId, username });
+    }
+
+    async addUserToRoom(userId: string, roomId: string): Promise<void> {
+        const socketId = this.connectedUsers.get(userId);
+        if (socketId) {
+        const socket = this.server.sockets.sockets.get(socketId);
+        if (socket) await socket.join(roomId);
+        }
+    }
+
+    removeUserFromRoom(userId: string, roomId: string): void {
+        const socketId = this.connectedUsers.get(userId);
+        if (socketId) {
+        const socket = this.server.sockets.sockets.get(socketId);
+        if (socket) void socket.leave(roomId);
+        }
+    }
+
+    // ─── Helpers ───────────────────────────────────────────────────
+    private setSocketData(client: Socket, data: SocketData): void {
+        (client as Socket & { data: SocketData }).data = data;
+    }
+
+    private getSocketData(client: Socket): SocketData | null {
+        const data = (client as Socket & { data: unknown }).data;
+        if (
+        data &&
+        typeof data === 'object' &&
+        'userId' in data &&
+        'username' in data &&
+        typeof (data as SocketData).userId === 'string' &&
+        typeof (data as SocketData).username === 'string'
+        ) {
+        return data as SocketData;
+        }
+        return null;
+    }
+
+    private extractPayload(client: Socket): JwtPayload | null {
+        try {
+        const auth = client.handshake.auth as Record<string, unknown>;
+        const token =
+            typeof auth.token === 'string'
+            ? auth.token
+            : client.handshake.headers.authorization?.replace('Bearer ', '');
+        if (!token) return null;
+        return this.jwtService.verify<JwtPayload>(token, {
+            secret: this.configService.get<string>('jwt.accessSecret'),
+        });
+        } catch {
+        return null;
+        }
+    }
 }
