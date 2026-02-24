@@ -10,12 +10,14 @@ import { UserOrmEntity } from '../../infrastructure/database/typeorm/entities/us
 import { CloudinaryModule } from '../../infrastructure/cloudinary/cloudinary.module';
 import { USER_REPOSITORY } from '../../core/repositories/user.repository';
 import { AuthModule } from '../auth/auth.module';
+import { JobsModule } from 'src/application/job/jobs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserOrmEntity]),
     CloudinaryModule,
     AuthModule,
+    JobsModule,
   ],
   controllers: [UsersController],
   providers: [

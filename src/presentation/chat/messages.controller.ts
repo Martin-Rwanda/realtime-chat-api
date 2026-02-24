@@ -28,6 +28,10 @@ import { NotificationService } from '../../application/notifications/notificatio
 import { NotificationType } from 'src/shared/enum/notification-type.enum';
 import type { IRoomRepository } from '../../core/repositories/room.repository';
 import {  ROOM_REPOSITORY } from '../../core/repositories/room.repository';
+import { JobProducerService } from 'src/application/job/job-producer.service';
+import type { IUserRepository } from '../../core/repositories/user.repository';
+import { USER_REPOSITORY } from '../../core/repositories/user.repository';
+import { UserStatus } from 'src/shared/enum/user-status.enum';
 
 @ApiTags('Messages')
 @ApiBearerAuth('JWT-auth')
@@ -42,32 +46,50 @@ export class MessagesController {
         private readonly markReadUseCase: MarkReadUseCase,
         private readonly chatGateway: ChatGateway,
         private readonly notificationService: NotificationService,
+        private readonly jobProducerService: JobProducerService,
         @Inject(ROOM_REPOSITORY)
         private readonly roomRepository: IRoomRepository,
+        @Inject(USER_REPOSITORY)
+        private readonly userRepository: IUserRepository,
     ) {}
 
     @Post()
     @ApiOperation({ summary: 'Send a message to a room' })
     async sendMessage(
-        @CurrentUser() user: { sub: string },
-        @Body() dto: SendMessageDto,
-        ) {
+    @CurrentUser() user: { sub: string; username: string },
+    @Body() dto: SendMessageDto,
+    ) {
         const message = await this.sendMessageUseCase.execute(user.sub, dto);
         this.chatGateway.emitNewMessage(message.roomId, message);
 
-        // Notify all room members except sender
         const members = await this.roomRepository.findMembers(message.roomId);
+
         for (const member of members) {
-            if (member.userId !== user.sub) {
-                await this.notificationService.create({
-                    userId: member.userId,
-                    type: NotificationType.NEW_MESSAGE,
-                    title: 'New Message',
-                    body: `New message in your room`,
-                    metadata: { roomId: message.roomId, messageId: message.id },
+            if (member.userId === user.sub) continue;
+
+            // Create in-app notification
+            await this.notificationService.create({
+            userId: member.userId,
+            type: NotificationType.NEW_MESSAGE,
+            title: 'New Message',
+            body: `New message in your room`,
+            metadata: { roomId: message.roomId, messageId: message.id },
+            });
+
+            // If member is offline → queue email notification
+            const memberUser = await this.userRepository.findById(member.userId);
+            if (memberUser?.status === UserStatus.OFFLINE) {
+                console.log(`>>> Queueing email for ${memberUser.email}`);
+                await this.jobProducerService.sendOfflineNotificationEmail({
+                    recipientEmail: memberUser.email,
+                    recipientUsername: memberUser.username,
+                    senderUsername: user.username,
+                    roomName: message.roomId,
+                    messageContent: message.content,
                 });
-           }
-       }
+            }
+        }
+
         return { success: true, data: message };
     }
 
