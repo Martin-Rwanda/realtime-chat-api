@@ -25,6 +25,7 @@ import { USER_REPOSITORY } from '../../core/repositories/user.repository';
 import { MESSAGE_REPOSITORY } from '../../core/repositories/message.repository';
 import { AuthModule } from '../auth/auth.module';
 import { WebsocketsModule } from '../../infrastructure/websockets/websockets.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
@@ -36,7 +37,8 @@ import { WebsocketsModule } from '../../infrastructure/websockets/websockets.mod
         MessageReadOrmEntity,
         ]),
         AuthModule,
-        WebsocketsModule
+        WebsocketsModule,
+        NotificationsModule
     ],
     controllers: [RoomsController, MessagesController],
     providers: [

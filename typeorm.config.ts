@@ -6,6 +6,7 @@ import { RoomOrmEntity } from './src/infrastructure/database/typeorm/entities/ro
 import { RoomMemberOrmEntity } from './src/infrastructure/database/typeorm/entities/room-member.orm-entity';
 import { MessageOrmEntity } from './src/infrastructure/database/typeorm/entities/message.orm-entity';
 import { MessageReadOrmEntity } from './src/infrastructure/database/typeorm/entities/message-read.orm-entity';
+import { NotificationOrmEntity } from './src/infrastructure/database/typeorm/entities/notification.orm-entity';
 
 
 config();
@@ -17,7 +18,7 @@ export default new DataSource({
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_NAME ?? 'postgres',
-  entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity, MessageOrmEntity, MessageReadOrmEntity],
+  entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity, MessageOrmEntity, MessageReadOrmEntity, NotificationOrmEntity],
   migrations: ['src/infrastructure/database/typeorm/migrations/**/*.ts'],
   synchronize: false,
 });

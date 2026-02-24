@@ -151,6 +151,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
+    emitNotification(userId: string, notification: unknown): void {
+        const socketId = this.connectedUsers.get(userId);
+        if (socketId) {
+            this.server.to(socketId).emit('notification:new', notification);
+        }
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────
     private setSocketData(client: Socket, data: SocketData): void {
         (client as Socket & { data: SocketData }).data = data;
