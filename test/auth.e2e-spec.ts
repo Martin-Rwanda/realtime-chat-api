@@ -5,6 +5,46 @@ import { AppModule } from '../src/app.module';
 import { GlobalExceptionFilter } from '../src/shared/filters/http-exception.filter';
 import { DataSource } from 'typeorm';
 
+interface AuthResponse {
+  success: boolean;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    user: {
+      id: string;
+      email: string;
+      username: string;
+    };
+  };
+}
+
+interface RegisterResponse {
+  success: boolean;
+  data: {
+    id: string;
+    email: string;
+    username: string;
+  };
+}
+
+interface UserResponse {
+  success: boolean;
+  data: {
+    id: string;
+    email: string;
+    username: string;
+    avatarUrl: string | null;
+    status: string;
+    passwordHash?: string;
+  };
+}
+
+interface ErrorResponse {
+  success: boolean;
+  statusCode: number;
+  message: string;
+}
+
 describe('Auth (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
@@ -32,7 +72,6 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     await dataSource.query('TRUNCATE TABLE refresh_tokens CASCADE');
     await dataSource.query('TRUNCATE TABLE users CASCADE');
     await app.close();
@@ -49,8 +88,9 @@ describe('Auth (e2e)', () => {
         })
         .expect(201);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.email).toBe('e2etest@example.com');
+      const body = response.body as RegisterResponse;
+      expect(body.success).toBe(true);
+      expect(body.data.email).toBe('e2etest@example.com');
     });
 
     it('should fail with duplicate email', async () => {
@@ -63,7 +103,8 @@ describe('Auth (e2e)', () => {
         })
         .expect(409);
 
-      expect(response.body.success).toBe(false);
+      const body = response.body as ErrorResponse;
+      expect(body.success).toBe(false);
     });
 
     it('should fail with invalid email', async () => {
@@ -99,12 +140,13 @@ describe('Auth (e2e)', () => {
         })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.accessToken).toBeDefined();
-      expect(response.body.data.refreshToken).toBeDefined();
+      const body = response.body as AuthResponse;
+      expect(body.success).toBe(true);
+      expect(body.data.accessToken).toBeDefined();
+      expect(body.data.refreshToken).toBeDefined();
 
-      accessToken = response.body.data.accessToken as string;
-      refreshToken = response.body.data.refreshToken as string;
+      accessToken = body.data.accessToken;
+      refreshToken = body.data.refreshToken;
     });
 
     it('should fail with wrong password', async () => {
@@ -135,8 +177,9 @@ describe('Auth (e2e)', () => {
         .send({ refreshToken })
         .expect(200);
 
-      expect(response.body.data.accessToken).toBeDefined();
-      expect(response.body.data.refreshToken).toBeDefined();
+      const body = response.body as AuthResponse;
+      expect(body.data.accessToken).toBeDefined();
+      expect(body.data.refreshToken).toBeDefined();
     });
 
     it('should fail with invalid refresh token', async () => {
@@ -154,8 +197,9 @@ describe('Auth (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body.data.email).toBe('e2etest@example.com');
-      expect(response.body.data.passwordHash).toBeUndefined();
+      const body = response.body as UserResponse;
+      expect(body.data.email).toBe('e2etest@example.com');
+      expect(body.data.passwordHash).toBeUndefined();
     });
 
     it('should fail without token', async () => {
