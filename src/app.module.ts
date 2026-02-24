@@ -7,6 +7,9 @@ import { ChatModule } from './presentation/chat/chat.module';
 import configuration from './shared/config/configuration';
 import { WebsocketsModule } from './infrastructure/websockets/websockets.module';
 import { NotificationsModule } from './presentation/notifications/notifications.module';
+import { RedisModule } from './infrastructure/redis/redis.module';
+import { BullQueuesModule } from './infrastructure/bull/bull.module';
+import { JobsModule } from './application/job/jobs.module';
 
 @Module({
   imports: [
@@ -16,11 +19,14 @@ import { NotificationsModule } from './presentation/notifications/notifications.
       envFilePath: '.env',
     }),
     DatabaseModule,
+    RedisModule,
+    BullQueuesModule,
     AuthModule,
     UsersModule,
     ChatModule,
     WebsocketsModule,
-    NotificationsModule
+    NotificationsModule,
+    JobsModule
   ],
 })
 export class AppModule {}

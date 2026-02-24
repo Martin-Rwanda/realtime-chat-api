@@ -26,6 +26,7 @@ import { MESSAGE_REPOSITORY } from '../../core/repositories/message.repository';
 import { AuthModule } from '../auth/auth.module';
 import { WebsocketsModule } from '../../infrastructure/websockets/websockets.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { JobsModule } from 'src/application/job/jobs.module';
 
 @Module({
     imports: [
@@ -38,7 +39,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
         ]),
         AuthModule,
         WebsocketsModule,
-        NotificationsModule
+        NotificationsModule,
+        JobsModule
     ],
     controllers: [RoomsController, MessagesController],
     providers: [

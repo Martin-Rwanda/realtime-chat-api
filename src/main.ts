@@ -3,6 +3,9 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './shared/filters/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
+import { UserOrmEntity } from './infrastructure/database/typeorm/entities/user.orm-entity';
+import { UserStatus } from './shared/enum/user-status.enum';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -58,6 +61,15 @@ async function bootstrap() {
       persistAuthorization: true,
     },
   });
+  // Reset all users to offline on startup
+  const dataSource = app.get(DataSource);
+  await dataSource
+    .createQueryBuilder()
+    .update(UserOrmEntity)
+    .set({ status: UserStatus.OFFLINE })
+    .where('status = :status', { status: UserStatus.ONLINE })
+    .execute();
+  console.log('All users reset to offline');
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
