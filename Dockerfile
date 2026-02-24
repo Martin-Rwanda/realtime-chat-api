@@ -21,13 +21,17 @@ WORKDIR /app
 
 # Copy only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=dev
 
 # Copy built output from builder stage
 COPY --from=builder /app/dist ./dist
 
 # Copy env example just for reference (real .env comes from environment)
-COPY .env.example .env.example
+# in dev
+# COPY .env.example .env.example
+
+#in prod
+ENV NODE_ENV=production  
 
 EXPOSE 3000
 
