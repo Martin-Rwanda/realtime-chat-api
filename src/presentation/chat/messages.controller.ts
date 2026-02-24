@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,6 +24,10 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { ChatGateway } from '../../infrastructure/websockets/chat.gateway';
+import { NotificationService } from '../../application/notifications/notification.service';
+import { NotificationType } from 'src/shared/enum/notification-type.enum';
+import type { IRoomRepository } from '../../core/repositories/room.repository';
+import {  ROOM_REPOSITORY } from '../../core/repositories/room.repository';
 
 @ApiTags('Messages')
 @ApiBearerAuth('JWT-auth')
@@ -36,6 +41,9 @@ export class MessagesController {
         private readonly deleteMessageUseCase: DeleteMessageUseCase,
         private readonly markReadUseCase: MarkReadUseCase,
         private readonly chatGateway: ChatGateway,
+        private readonly notificationService: NotificationService,
+        @Inject(ROOM_REPOSITORY)
+        private readonly roomRepository: IRoomRepository,
     ) {}
 
     @Post()
@@ -43,10 +51,23 @@ export class MessagesController {
     async sendMessage(
         @CurrentUser() user: { sub: string },
         @Body() dto: SendMessageDto,
-    ) {
+        ) {
         const message = await this.sendMessageUseCase.execute(user.sub, dto);
-        // emit real-time event to all room members
         this.chatGateway.emitNewMessage(message.roomId, message);
+
+        // Notify all room members except sender
+        const members = await this.roomRepository.findMembers(message.roomId);
+        for (const member of members) {
+            if (member.userId !== user.sub) {
+                await this.notificationService.create({
+                    userId: member.userId,
+                    type: NotificationType.NEW_MESSAGE,
+                    title: 'New Message',
+                    body: `New message in your room`,
+                    metadata: { roomId: message.roomId, messageId: message.id },
+                });
+           }
+       }
         return { success: true, data: message };
     }
 
