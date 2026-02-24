@@ -13,6 +13,7 @@ COPY . .
 
 # Build the NestJS app
 RUN npm run build
+RUN ls -la dist/  # debug: show what's in dist
 
 # ─── Stage 2: Production ────────────────────────────────────────
 FROM node:20-alpine AS production
@@ -21,17 +22,15 @@ WORKDIR /app
 
 # Copy only production dependencies
 COPY package*.json ./
-RUN npm ci --only=dev
+
+RUN npm ci --omit=dev
 
 # Copy built output from builder stage
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist /app/dist
+RUN ls -la /app/dist/  # debug: verify dist was copied
 
 # Copy env example just for reference (real .env comes from environment)
-# in dev
-# COPY .env.example .env.example
-
-#in prod
-ENV NODE_ENV=production  
+ENV NODE_ENV=production
 
 EXPOSE 3000
 
