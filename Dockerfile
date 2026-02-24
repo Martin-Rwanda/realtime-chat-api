@@ -22,6 +22,8 @@
 # # Copy only production dependencies
 # COPY package*.json ./
 
+# Build the NestJS 
+
 # RUN npm ci --omit=dev
 
 # # Copy built output from builder stage
@@ -46,6 +48,9 @@ RUN npm run build
 RUN ls -la dist/
 
 RUN npm prune --omit=dev
+# Copy built output from builder stage
+COPY --from=builder /app/dist /app/dist
+RUN ls -la /app/dist/  # debug: verify dist was copied
 
 ENV NODE_ENV=production
 
