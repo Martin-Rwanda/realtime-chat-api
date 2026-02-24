@@ -53,8 +53,8 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Run tests
+        
+      - name: Run unit tests
         run: npm run test -- --passWithNoTests
         env:
           NODE_ENV: test
@@ -73,3 +73,54 @@ jobs:
           CLOUDINARY_CLOUD_NAME: test
           CLOUDINARY_API_KEY: test
           CLOUDINARY_API_SECRET: test
+          MAIL_HOST: smtp.gmail.com
+          MAIL_PORT: 587
+          MAIL_USER: test@gmail.com
+          MAIL_PASS: testpass
+      - name: Run migrations
+        run: npm run migration:run
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: realtime_chat_test
+          JWT_ACCESS_SECRET: test_access_secret
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_SECRET: test_refresh_secret
+          JWT_REFRESH_EXPIRES_IN: 7d
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          CLOUDINARY_CLOUD_NAME: test
+          CLOUDINARY_API_KEY: test
+          CLOUDINARY_API_SECRET: test
+          MAIL_HOST: smtp.gmail.com
+          MAIL_PORT: 587
+          MAIL_USER: test@gmail.com
+          MAIL_PASS: testpass
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: realtime_chat_test
+          JWT_ACCESS_SECRET: test_access_secret
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_SECRET: test_refresh_secret
+          JWT_REFRESH_EXPIRES_IN: 7d
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          CLOUDINARY_CLOUD_NAME: test
+          CLOUDINARY_API_KEY: test
+          CLOUDINARY_API_SECRET: test
+          MAIL_HOST: smtp.gmail.com
+          MAIL_PORT: 587
+          MAIL_USER: test@gmail.com
+          MAIL_PASS: testpass
