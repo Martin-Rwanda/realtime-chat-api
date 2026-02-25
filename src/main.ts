@@ -27,7 +27,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: '*', 
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -61,8 +61,13 @@ async function bootstrap() {
       persistAuthorization: true,
     },
   });
-  // Reset all users to offline on startup
+
+  // Run migrations first ← NEW
   const dataSource = app.get(DataSource);
+  await dataSource.runMigrations();
+  console.log('Migrations ran successfully');
+
+  // Reset all users to offline on startup
   await dataSource
     .createQueryBuilder()
     .update(UserOrmEntity)
@@ -71,10 +76,10 @@ async function bootstrap() {
     .execute();
   console.log('All users reset to offline');
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT ?? 3000;
   await app.listen(port);
   console.log(`🚀 Server running on http://localhost:${port}/api/v1`);
-  console.log(`�docs Swagger docs at http://localhost:${port}/api/docs`);
+  console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();

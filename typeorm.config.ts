@@ -19,7 +19,11 @@ export default new DataSource({
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_NAME ?? 'postgres',
   entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity, MessageOrmEntity, MessageReadOrmEntity, NotificationOrmEntity],
-  migrations: ['src/infrastructure/database/typeorm/migrations/**/*.ts'],
+  migrations: [
+  process.env.NODE_ENV === 'production'
+    ? 'dist/src/infrastructure/database/typeorm/migrations/**/*.js'
+    : 'src/infrastructure/database/typeorm/migrations/**/*.ts'
+],
   synchronize: false,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
