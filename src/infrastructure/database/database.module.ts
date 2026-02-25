@@ -26,6 +26,7 @@ import { NotificationOrmEntity } from './typeorm/entities/notification.orm-entit
         synchronize: false,
         logging: configService.get<string>('app.nodeEnv') === 'development',
         migrationsRun: false,
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
       }),
     }),
   ],
