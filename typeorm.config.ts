@@ -21,4 +21,5 @@ export default new DataSource({
   entities: [UserOrmEntity, RefreshTokenOrmEntity, RoomOrmEntity, RoomMemberOrmEntity, MessageOrmEntity, MessageReadOrmEntity, NotificationOrmEntity],
   migrations: ['src/infrastructure/database/typeorm/migrations/**/*.ts'],
   synchronize: false,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
